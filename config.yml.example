@@ -9,3 +9,8 @@ JOB_CONCURRENCY: 50
 
 # RELAY_ICON: https://
 # RELAY_IMAGE: https://
+
+# Built-in web admin panel. Enable it only behind HTTPS.
+ADMIN_ENABLED: false
+# ADMIN_USERNAME: admin
+# ADMIN_PASSWORD: change-me

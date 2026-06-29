@@ -42,6 +42,9 @@ This is Optional : When config file not exist, use environment variables.
   - RELAY_SUMMARY
   - RELAY_ICON
   - RELAY_IMAGE
+  - ADMIN_ENABLED
+  - ADMIN_USERNAME
+  - ADMIN_PASSWORD
 */
 package main
 
@@ -150,6 +153,9 @@ func initConfig(cmd *cobra.Command) {
 		viper.BindEnv("RELAY_SUMMARY")
 		viper.BindEnv("RELAY_ICON")
 		viper.BindEnv("RELAY_IMAGE")
+		viper.BindEnv("ADMIN_ENABLED")
+		viper.BindEnv("ADMIN_USERNAME")
+		viper.BindEnv("ADMIN_PASSWORD")
 	}
 
 	GlobalConfig, err = models.NewRelayConfig()

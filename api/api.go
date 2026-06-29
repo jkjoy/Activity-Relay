@@ -77,4 +77,11 @@ func handlersRegister() {
 	http.HandleFunc("/inbox", func(w http.ResponseWriter, r *http.Request) {
 		handleInbox(w, r, decodeActivity)
 	})
+	http.HandleFunc("/", handlePublicIndex)
+	http.HandleFunc("/servers", handlePublicServers)
+	http.HandleFunc("/api/servers", handleAPIServers)
+	http.HandleFunc("/admin", handleAdminIndex)
+	http.HandleFunc("/admin/", handleAdminIndex)
+	http.HandleFunc("/admin/servers", handleAdminIndex)
+	http.HandleFunc("/admin/servers/", handleAdminServerAction)
 }

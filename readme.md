@@ -70,6 +70,28 @@ JOB_CONCURRENCY: 50
  - RELAY_SUMMARY
  - RELAY_ICON
  - RELAY_IMAGE
+ - ADMIN_ENABLED
+ - ADMIN_USERNAME
+ - ADMIN_PASSWORD
+
+## Built-in Web Admin and Public List
+
+Activity-Relay includes a small built-in web UI in the API server:
+
+- `/` public relay landing page with inbox/actor usage instructions.
+- `/servers` public relay member list.
+- `/api/servers` public JSON member list.
+- `/admin` and `/admin/servers` visual admin panel.
+
+Admin mutations use HTTP Basic authentication when `ADMIN_ENABLED` is true:
+
+```yaml
+ADMIN_ENABLED: true
+ADMIN_USERNAME: admin
+ADMIN_PASSWORD: change-me
+```
+
+The admin panel can delete active memberships, mark domains as limited, block domains, and unblock/unlimit existing domain rules. Enable the admin panel only behind HTTPS and use a strong password.
 
 ## How to Use Relay (for Relay Customers)
 
