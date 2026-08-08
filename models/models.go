@@ -1,6 +1,7 @@
 package models
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"io"
@@ -8,9 +9,26 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/go-fed/httpsig"
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 )
+
+func signGETRequest(req *http.Request, keyID string, privateKey *rsa.PrivateKey) error {
+	req.Header.Set("Host", req.URL.Host)
+	req.Header.Set("Date", time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05")+" GMT")
+	signer, _, err := httpsig.NewSigner(
+		[]httpsig.Algorithm{httpsig.RSA_SHA256},
+		httpsig.DigestSha256,
+		[]string{httpsig.RequestTarget, "Host", "Date"},
+		httpsig.Signature,
+		60*60,
+	)
+	if err != nil {
+		return err
+	}
+	return signer.SignRequest(privateKey, keyID, req, nil)
+}
 
 // PublicKey : Activity Certificate.
 type PublicKey struct {
@@ -85,7 +103,7 @@ func NewActivityPubActorFromRelayConfig(globalConfig *RelayConfig) Actor {
 }
 
 // NewActivityPubActorFromRemoteActor : Retrieve Actor from remote instance.
-func NewActivityPubActorFromRemoteActor(url string, uaString string, cache *cache.Cache) (Actor, error) {
+func NewActivityPubActorFromRemoteActor(url string, uaString string, cache *cache.Cache, keyID string, privateKey *rsa.PrivateKey) (Actor, error) {
 	var actor = new(Actor)
 	var err error
 	cacheData, found := cache.Get(url)
@@ -100,6 +118,11 @@ func NewActivityPubActorFromRemoteActor(url string, uaString string, cache *cach
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Accept", "application/activity+json")
 	req.Header.Set("User-Agent", uaString)
+	if privateKey != nil && keyID != "" {
+		if err := signGETRequest(req, keyID, privateKey); err != nil {
+			return *actor, err
+		}
+	}
 	client := new(http.Client)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -129,6 +152,40 @@ type Activity struct {
 	Object  interface{} `json:"object,omitempty"`
 	To      []string    `json:"to,omitempty"`
 	Cc      []string    `json:"cc,omitempty"`
+}
+
+// UnmarshalJSON normalizes the `to` and `cc` properties so that both
+// single-string and array-of-string forms decode into []string.
+func (a *Activity) UnmarshalJSON(data []byte) error {
+	type alias Activity
+	aux := &struct {
+		*alias
+		To json.RawMessage `json:"to,omitempty"`
+		Cc json.RawMessage `json:"cc,omitempty"`
+	}{
+		alias: (*alias)(a),
+	}
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	a.To = parseStringOrArray(aux.To)
+	a.Cc = parseStringOrArray(aux.Cc)
+	return nil
+}
+
+func parseStringOrArray(raw json.RawMessage) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal(raw, &arr); err == nil {
+		return arr
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return []string{s}
+	}
+	return nil
 }
 
 // GenerateReply : Generate activity to activity's actor.
